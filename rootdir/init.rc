@@ -1,3 +1,5 @@
+on early-init
+   write /sys/devices/system/cpu/cpu0/cpufreq/scaling_min_freq 245760
 
 on init
 
@@ -66,6 +68,8 @@ loglevel 3
     write /proc/sys/kernel/sched_compat_yield 1
     write /proc/sys/kernel/sched_child_runs_first 0
 
+    exec /sbin/charge_only_mode
+
 # Create cgroup mount points for process groups
     mkdir /dev/cpuctl
     mount cgroup none /dev/cpuctl cpu
@@ -84,6 +88,7 @@ loglevel 3
     chmod 0777 /dev/cpuctl/bg_non_interactive/tasks
     # 5.0 %
     write /dev/cpuctl/bg_non_interactive/cpu.shares 52
+
 
 # mount mtd partitions
     # Mount /system rw first to give the filesystem a chance to save a checkpoint
@@ -279,11 +284,13 @@ on boot
 
 # Define TCP buffer sizes for various networks
 #   ReadMin, ReadInitial, ReadMax, WriteMin, WriteInitial, WriteMax,
-    setprop net.tcp.buffersize.default 4096,87380,110208,4096,16384,110208
+    setprop net.tcp.buffersize.default 64000,128000,256000,4096,16384,110208
     setprop net.tcp.buffersize.wifi    4095,87380,110208,4096,16384,110208
-    setprop net.tcp.buffersize.umts    4094,87380,110208,4096,16384,110208
-    setprop net.tcp.buffersize.edge    4093,26280,35040,4096,16384,35040
+    setprop net.tcp.buffersize.umts    64000,128000,256000,4096,16384,110208
+    setprop net.tcp.buffersize.edge    16384,35040,52000,4096,16384,35040
     setprop net.tcp.buffersize.gprs    4092,8760,11680,4096,8760,11680
+
+
 
 # Include extra init file
     import /system/etc/init.local.rc
