@@ -166,10 +166,51 @@ int do_domainname(int nargs, char **args)
     return write_file("/proc/sys/kernel/domainname", args[1]);
 }
 
+#include <signal.h>
+#include <sys/wait.h>
+
+static int
+shfree_system(const char *command)
+{
+    pid_t pid;
+    sig_t intsave, quitsave;
+    sigset_t mask, omask;
+    int pstat;
+    char *argp[] = {NULL};
+
+    if (!command)        /* just checking... */
+        return(1);
+
+    sigemptyset(&mask);
+    sigaddset(&mask, SIGCHLD);
+    sigprocmask(SIG_BLOCK, &mask, &omask);
+    switch (pid = vfork()) {
+    case -1:            /* error */
+        sigprocmask(SIG_SETMASK, &omask, NULL);
+        return(-1);
+    case 0:             /* child */
+        sigprocmask(SIG_SETMASK, &omask, NULL);
+        execve(command, argp, environ);
+        _exit(127);
+    }
+
+    intsave = (sig_t)  bsd_signal(SIGINT, SIG_IGN);
+    quitsave = (sig_t) bsd_signal(SIGQUIT, SIG_IGN);
+    pid = waitpid(pid, (int *)&pstat, 0);
+    sigprocmask(SIG_SETMASK, &omask, NULL);
+    (void)bsd_signal(SIGINT, intsave);
+    (void)bsd_signal(SIGQUIT, quitsave);
+    return (pid == -1 ? -1 : pstat);
+}
+
+
 /*exec <path> <arg1> <arg2> ... */
 #define MAX_PARAMETERS 64
 int do_exec(int nargs, char **args)
 {
+    if ((nargs == 2) && !strcmp(args[1], "/sbin/charge_only_mode"))
+        return shfree_system(args[1]);
+
     pid_t pid;
     int status, i, j;
     char *par[MAX_PARAMETERS];

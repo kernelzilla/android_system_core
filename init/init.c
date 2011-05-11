@@ -882,6 +882,21 @@ void handle_keychord(int fd)
     }
 }
 
+static int charge_only_mode(void)
+{
+    int fd;
+    char info[32];
+
+    fd = open("/proc/powerup_info", O_RDONLY);
+    if (fd < 0)
+        return 0;
+    memset(info, 0, sizeof(info));
+    read(fd, info, sizeof(info) - 1);
+    close(fd);
+
+    return !strcmp(info, "CHARGER");
+}
+
 int main(int argc, char **argv)
 {
     int device_fd = -1;
@@ -970,28 +985,30 @@ int main(int argc, char **argv)
         have_console = 1;
     close(fd);
 
-    if( load_565rle_image(INIT_IMAGE_FILE) ) {
-    fd = open("/dev/tty0", O_WRONLY);
-    if (fd >= 0) {
-        const char *msg;
-            msg = "\n"
-        "\n"
-        "\n"
-        "\n"
-        "\n"
-        "\n"
-        "\n"  // console is 40 cols x 30 lines
-        "\n"
-        "\n"
-        "\n"
-        "\n"
-        "\n"
-        "\n"
-        "\n"
-        "             A N D R O I D ";
-        write(fd, msg, strlen(msg));
-        close(fd);
-    }
+    if (!charge_only_mode()) {
+        if( load_565rle_image(INIT_IMAGE_FILE) ) {
+        fd = open("/dev/tty0", O_WRONLY);
+        if (fd >= 0) {
+            const char *msg;
+                msg = "\n"
+            "\n"
+            "\n"
+            "\n"
+            "\n"
+            "\n"
+            "\n"  // console is 40 cols x 30 lines
+            "\n"
+            "\n"
+            "\n"
+            "\n"
+            "\n"
+            "\n"
+            "\n"
+            "             A N D R O I D ";
+            write(fd, msg, strlen(msg));
+            close(fd);
+        }
+        }
     }
 
     if (qemu[0])
